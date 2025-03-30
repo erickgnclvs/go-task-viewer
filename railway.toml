@@ -1,9 +1,8 @@
 [build]
 builder = "nixpacks"
-cmdOverride = "./build.sh"
 
 [deploy]
-startCommand = "./app"
+startCommand = "./out"
 numReplicas = 1
 healthcheckPath = "/health"
 healthcheckTimeout = 300
