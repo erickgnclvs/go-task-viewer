@@ -558,6 +558,37 @@
                 <div class="result-value">${{ .AverageHourlyRate }}/hora</div>
             </div>
             
+            <h3>Detalhamento de Horas por Tipo</h3>
+            <div class="separator"></div>
+            
+            <div class="result-item">
+                <div class="result-label">Horas em Tarefas (Task):</div>
+                <div class="result-value">{{ .TaskHours }}</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Horas em Tempo Excedido:</div>
+                <div class="result-value">{{ .ExceededTimeHours }}</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Horas em Outros:</div>
+                <div class="result-value">{{ .OtherHours }}</div>
+            </div>
+            
+            <h3>Médias por Tarefa</h3>
+            <div class="separator"></div>
+            
+            <div class="result-item">
+                <div class="result-label">Tempo médio por tarefa:</div>
+                <div class="result-value">{{ .AvgTimePerTask }}</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Valor médio por tarefa:</div>
+                <div class="result-value">{{ .AvgValuePerTask }}</div>
+            </div>
+            
             <div class="details-button-container">
                 <button id="toggleDetails" class="details-button">{{ if .ShowDetails }}Ocultar Detalhes{{ else }}Mostrar Detalhes{{ end }}</button>
                 <form id="detailsForm" action="/analyze" method="post">

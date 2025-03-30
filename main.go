@@ -89,21 +89,28 @@ func parseTime(timeStr string) float64 {
 
 // TemplateData holds data to be passed to HTML templates
 type TemplateData struct {
-	RawInput         string
-	HasResults       bool
-	TotalTasks       int
-	TotalHours       string
-	TotalValue       string
-	TasksValue       string
-	ExceededTimeValue string
-	OtherValue       string
-	AverageHourlyRate string
-	CurrentYear      int
+	RawInput            string
+	HasResults          bool
+	TotalTasks          int
+	TotalHours          string
+	TotalValue          string
+	TasksValue          string
+	ExceededTimeValue   string
+	OtherValue          string
+	AverageHourlyRate   string
+	CurrentYear         int
 	// Input source (csv or text)
-	InputSource      string
+	InputSource         string
+	// Detailed hour breakdowns
+	TaskHours           string
+	ExceededTimeHours   string
+	OtherHours          string
+	// Average metrics
+	AvgTimePerTask      string
+	AvgValuePerTask     string
 	// Task details
-	ShowDetails      bool
-	Tasks            []TaskDisplay
+	ShowDetails         bool
+	Tasks               []TaskDisplay
 }
 
 // TaskDisplay represents a task for display purposes
@@ -365,6 +372,26 @@ func main() {
 			totalHoursInt := int(totalHoursValue)
 			totalMinutes := int((totalHoursValue - float64(totalHoursInt)) * 60)
 			
+			// Format detailed hour breakdowns
+			taskHoursValue := results["TaskHours"].(float64)
+			taskHoursInt := int(taskHoursValue)
+			taskMinutes := int((taskHoursValue - float64(taskHoursInt)) * 60)
+			
+			exceededTimeHoursValue := results["ExceededTimeHours"].(float64)
+			exceededTimeHoursInt := int(exceededTimeHoursValue)
+			exceededTimeMinutes := int((exceededTimeHoursValue - float64(exceededTimeHoursInt)) * 60)
+			
+			otherHoursValue := results["OtherHours"].(float64)
+			otherHoursInt := int(otherHoursValue)
+			otherMinutes := int((otherHoursValue - float64(otherHoursInt)) * 60)
+			
+			// Format average metrics
+			avgTimePerTaskValue := results["AvgTimePerTask"].(float64)
+			avgTimeMinutes := int(avgTimePerTaskValue)
+			avgTimeSeconds := int((avgTimePerTaskValue - float64(avgTimeMinutes)) * 60)
+			avgValuePerTaskValue := results["AvgValuePerTask"].(float64)
+			
+			// Set the values in the template data
 			data.TotalTasks = results["TotalTasks"].(int)
 			data.TotalHours = fmt.Sprintf("%.2f horas (%dh %dmin)", totalHoursValue, totalHoursInt, totalMinutes)
 			data.TotalValue = fmt.Sprintf("%.2f", results["TotalValue"].(float64))
@@ -372,6 +399,15 @@ func main() {
 			data.ExceededTimeValue = fmt.Sprintf("%.2f", results["ExceededTimeValue"].(float64))
 			data.OtherValue = fmt.Sprintf("%.2f", results["OtherValue"].(float64))
 			data.AverageHourlyRate = fmt.Sprintf("%.2f", results["AverageHourlyRate"].(float64))
+			
+			// Set detailed hour breakdowns
+			data.TaskHours = fmt.Sprintf("%.2f horas (%dh %dmin)", taskHoursValue, taskHoursInt, taskMinutes)
+			data.ExceededTimeHours = fmt.Sprintf("%.2f horas (%dh %dmin)", exceededTimeHoursValue, exceededTimeHoursInt, exceededTimeMinutes)
+			data.OtherHours = fmt.Sprintf("%.2f horas (%dh %dmin)", otherHoursValue, otherHoursInt, otherMinutes)
+			
+			// Set average metrics
+			data.AvgTimePerTask = fmt.Sprintf("%dm %ds", avgTimeMinutes, avgTimeSeconds)
+			data.AvgValuePerTask = fmt.Sprintf("$%.2f", avgValuePerTaskValue)
 		}
 
 		tmpl.Execute(w, data)
@@ -525,6 +561,15 @@ func analyzeData(tasks []Task) map[string]interface{} {
 	totalOtherValue := 0.0
 	totalHours := 0.0
 
+	// Detailed hour breakdowns
+	taskHours := 0.0
+	exceededTimeHours := 0.0
+	otherHours := 0.0
+
+	// For average calculations
+	totalTaskTime := 0.0 // in minutes
+	totalTaskCount := 0
+
 	for _, task := range tasks {
 		// Debug output to logs, not web interface
 		log.Printf("Analisando: Type=%s, Value=%.2f, DurationMins=%.2f\n",
@@ -533,13 +578,23 @@ func analyzeData(tasks []Task) map[string]interface{} {
 		// Only count actual Task items in the total tasks count
 		if task.Type == "Task" {
 			totalTasks++
+			totalTaskCount++
+			totalTaskTime += task.DurationMins
 		}
 
-		// Include Task, Exceeded Time, and Operation in total hours calculation
-		if task.Type == "Task" || task.Type == "Exceeded Time" || task.Type == "Operation" {
+		// Track hours by task type
+		if task.Type == "Task" {
+			taskHours += task.DurationMins / 60
+			totalHours += task.DurationMins / 60
+		} else if task.Type == "Exceeded Time" {
+			exceededTimeHours += task.DurationMins / 60
+			totalHours += task.DurationMins / 60
+		} else if task.Type == "Operation" {
+			otherHours += task.DurationMins / 60
 			totalHours += task.DurationMins / 60
 		}
 
+		// Track values by task type
 		if task.Type == "Task" {
 			totalTasksValue += task.Value
 		} else if task.Type == "Exceeded Time" {
@@ -550,9 +605,23 @@ func analyzeData(tasks []Task) map[string]interface{} {
 	}
 
 	totalValue := totalTasksValue + totalExceededTimeValue + totalOtherValue
+
+	// Calculate averages
 	averageHourlyRate := 0.0
 	if totalHours > 0 {
 		averageHourlyRate = (totalTasksValue + totalExceededTimeValue) / totalHours
+	}
+
+	// Average time per task (in minutes)
+	avgTimePerTask := 0.0
+	if totalTaskCount > 0 {
+		avgTimePerTask = totalTaskTime / float64(totalTaskCount)
+	}
+
+	// Average value per task
+	avgValuePerTask := 0.0
+	if totalTaskCount > 0 {
+		avgValuePerTask = totalTasksValue / float64(totalTaskCount)
 	}
 
 	return map[string]interface{}{
@@ -563,5 +632,12 @@ func analyzeData(tasks []Task) map[string]interface{} {
 		"ExceededTimeValue": totalExceededTimeValue,
 		"OtherValue":        totalOtherValue,
 		"AverageHourlyRate": averageHourlyRate,
+		// Detailed hour breakdowns
+		"TaskHours":         taskHours,
+		"ExceededTimeHours": exceededTimeHours,
+		"OtherHours":        otherHours,
+		// Average metrics
+		"AvgTimePerTask":     avgTimePerTask,
+		"AvgValuePerTask":    avgValuePerTask,
 	}
 }
