@@ -947,8 +947,9 @@
             
             <div class="details-button-container">
                 <button id="toggleDetails" class="details-button">{{ if .ShowDetails }}Ocultar Detalhes{{ else }}Mostrar Detalhes{{ end }}</button>
-                <form id="detailsForm" action="/analyze" method="post">
+                <form id="detailsForm" action="/analyze" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="taskData" value="{{ .RawInput }}">
+                    <input type="hidden" name="inputSource" value="{{ .InputSource }}">
                     <input type="hidden" id="showDetailsInput" name="showDetails" value="{{ if .ShowDetails }}on{{ else }}off{{ end }}">
                 </form>
             </div>

@@ -48,7 +48,7 @@ func parseTime(timeStr string) float64 {
 		if err == nil {
 			totalMinutes += hours * 60
 		}
-		
+
 		// If there's content after 'h', update timeStr to process it
 		if len(parts) > 1 {
 			timeStr = strings.TrimSpace(parts[1])
@@ -65,7 +65,7 @@ func parseTime(timeStr string) float64 {
 		if err == nil {
 			totalMinutes += minutes
 		}
-		
+
 		// If there's content after 'm', update timeStr to process it
 		if len(parts) > 1 {
 			timeStr = strings.TrimSpace(parts[1])
@@ -89,30 +89,30 @@ func parseTime(timeStr string) float64 {
 
 // TemplateData holds data to be passed to HTML templates
 type TemplateData struct {
-	RawInput            string
-	HasResults          bool
-	TotalTasks          int
-	TotalHours          string
-	TotalValue          string
-	TasksValue          string
-	ExceededTimeValue   string
-	OtherValue          string
-	AverageHourlyRate   string
-	CurrentYear         int
+	RawInput          string
+	HasResults        bool
+	TotalTasks        int
+	TotalHours        string
+	TotalValue        string
+	TasksValue        string
+	ExceededTimeValue string
+	OtherValue        string
+	AverageHourlyRate string
+	CurrentYear       int
 	// Input source (csv or text)
-	InputSource         string
+	InputSource string
 	// Detailed hour breakdowns
-	TaskHours           string
-	ExceededTimeHours   string
-	OtherHours          string
+	TaskHours         string
+	ExceededTimeHours string
+	OtherHours        string
 	// Average metrics
-	AvgTimePerTask      string
-	AvgValuePerTask     string
+	AvgTimePerTask  string
+	AvgValuePerTask string
 	// For visualization
-	RawHourPercentages  []float64
+	RawHourPercentages []float64
 	// Task details
-	ShowDetails         bool
-	Tasks               []TaskDisplay
+	ShowDetails bool
+	Tasks       []TaskDisplay
 }
 
 // TaskDisplay represents a task for display purposes
@@ -131,18 +131,18 @@ type TaskDisplay struct {
 // parseCSV parses a CSV file with task data
 func parseCSV(file io.Reader) []Task {
 	var tasks []Task
-	
+
 	// Create CSV reader
 	reader := csv.NewReader(file)
 	reader.TrimLeadingSpace = true
-	
+
 	// Read and skip header row
 	header, err := reader.Read()
 	if err != nil {
 		log.Printf("Error reading CSV header: %v\n", err)
 		return tasks
 	}
-	
+
 	// Map CSV columns to our expected structure
 	dateIdx := -1
 	idIdx := -1
@@ -152,7 +152,7 @@ func parseCSV(file io.Reader) []Task {
 	typeIdx := -1
 	projectIdx := -1
 	statusIdx := -1
-	
+
 	for i, col := range header {
 		switch strings.ToLower(col) {
 		case "workdate", "date":
@@ -173,7 +173,7 @@ func parseCSV(file io.Reader) []Task {
 			statusIdx = i
 		}
 	}
-	
+
 	// Read all records and convert to tasks
 	for {
 		record, err := reader.Read()
@@ -184,31 +184,39 @@ func parseCSV(file io.Reader) []Task {
 			log.Printf("Error reading CSV row: %v\n", err)
 			continue
 		}
-		
+
 		task := Task{}
-		
+
 		// Extract data from CSV columns
 		if dateIdx >= 0 && dateIdx < len(record) {
 			task.Date = strings.Trim(record[dateIdx], "\"")
 		}
-		
+
 		if idIdx >= 0 && idIdx < len(record) {
 			task.ID = strings.Trim(record[idIdx], "\"")
 		}
-		
+
 		if durationIdx >= 0 && durationIdx < len(record) {
 			task.Duration = strings.Trim(record[durationIdx], "\"")
-			task.DurationMins = parseTime(task.Duration)
+			if task.Duration != "-" && task.Duration != "" {
+				task.DurationMins = parseTime(task.Duration)
+			} else {
+				task.Duration = "-" // Padronizar valores vazios
+				task.DurationMins = 0
+			}
 		}
-		
+
 		if rateIdx >= 0 && rateIdx < len(record) {
 			rateStr := strings.Trim(record[rateIdx], "\"")
-			if strings.Contains(rateStr, "$") && strings.Contains(rateStr, "/hr") {
+			if rateStr == "-" {
+				// Tratar valores vazios ou placeholders
+				task.Rate = 0
+			} else if strings.Contains(rateStr, "$") && strings.Contains(rateStr, "/hr") {
 				rateVal := strings.TrimSuffix(strings.TrimPrefix(rateStr, "$"), "/hr")
 				task.Rate, _ = strconv.ParseFloat(rateVal, 64)
 			}
 		}
-		
+
 		if valueIdx >= 0 && valueIdx < len(record) {
 			valueStr := strings.Trim(record[valueIdx], "\"")
 			if strings.Contains(valueStr, "$") {
@@ -216,7 +224,7 @@ func parseCSV(file io.Reader) []Task {
 				task.Value, _ = strconv.ParseFloat(valueVal, 64)
 			}
 		}
-		
+
 		if typeIdx >= 0 && typeIdx < len(record) {
 			payType := strings.Trim(record[typeIdx], "\"")
 			switch strings.ToLower(payType) {
@@ -226,26 +234,28 @@ func parseCSV(file io.Reader) []Task {
 				task.Type = "Exceeded Time"
 			case "missionreward":
 				task.Type = "Mission Reward"
+			case "qaoperation", "operation":
+				task.Type = "Operation"
 			default:
 				task.Type = payType
 			}
 		}
-		
+
 		if projectIdx >= 0 && projectIdx < len(record) {
 			task.Category = strings.Trim(record[projectIdx], "\"")
 		}
-		
+
 		if statusIdx >= 0 && statusIdx < len(record) {
 			task.Status = strings.Trim(record[statusIdx], "\"")
 		}
-		
+
 		// Debug output
 		log.Printf("CSV Parsed: Date=%s, ID=%s, Type=%s, Duration=%s, Rate=%.2f, Value=%.2f, DurationMins=%.2f\n",
 			task.Date, task.ID, task.Type, task.Duration, task.Rate, task.Value, task.DurationMins)
-		
+
 		tasks = append(tasks, task)
 	}
-	
+
 	log.Printf("Total de %d tarefas foram analisadas do CSV.\n", len(tasks))
 	return tasks
 }
@@ -260,8 +270,8 @@ func main() {
 	// Look for templates in multiple locations (local dev vs production)
 	var tmplPath string
 	templateLocations := []string{
-		"templates/index.html",  // Local development
-		"/templates/index.html", // Railway deployment
+		"templates/index.html",   // Local development
+		"/templates/index.html",  // Railway deployment
 		"./templates/index.html", // Alternative path
 	}
 
@@ -301,14 +311,15 @@ func main() {
 
 		// Set max file size (10MB)
 		r.ParseMultipartForm(10 << 20)
-		
+
 		// Get form data
 		showDetails := r.FormValue("showDetails") == "on"
-		
+		log.Printf("[DEBUG] Form showDetails=%v", showDetails)
+
 		var tasks []Task
 		var inputSource string
 		var taskData string
-		
+
 		// Check for file upload first
 		file, handler, err := r.FormFile("csvFile")
 		if err == nil {
@@ -316,27 +327,44 @@ func main() {
 			log.Printf("Uploaded File: %+v\n", handler.Filename)
 			log.Printf("File Size: %+v\n", handler.Size)
 			log.Printf("MIME Header: %+v\n", handler.Header)
-			
+
 			// Parse the CSV file
 			tasks = parseCSV(file)
+			log.Printf("[DEBUG] CSV Upload: %d tarefas encontradas", len(tasks))
 			inputSource = "csv"
 			// Save CSV content for display
 			file.Seek(0, 0) // Rewind file for reading again
 			buffer := new(strings.Builder)
 			io.Copy(buffer, file)
 			taskData = buffer.String()
+			log.Printf("[DEBUG] CSV carregado com sucesso, %d tarefas encontradas", len(tasks))
 		} else {
 			// Fall back to text input if no file was uploaded
 			taskData = r.FormValue("taskData")
+			// Verificar se uma fonte de entrada foi especificada
+			specifiedSource := r.FormValue("inputSource")
+			log.Printf("[DEBUG] Fonte especificada no formulário: %s", specifiedSource)
+
 			if taskData != "" {
-				tasks = parseInput(taskData)
-				inputSource = "text"
+				// Se uma fonte foi especificada, usamos ela
+				if specifiedSource == "csv" {
+					log.Printf("[DEBUG] Processando dados como CSV a partir do formulário")
+					// Converte o texto em um io.Reader para usar o parseCSV
+					reader := strings.NewReader(taskData)
+					tasks = parseCSV(reader)
+					inputSource = "csv"
+				} else {
+					log.Printf("[DEBUG] Processando dados como texto")
+					tasks = parseInput(taskData)
+					inputSource = "text"
+				}
 			}
 		}
 
 		// Analyze the data if we have tasks
 		results := make(map[string]interface{})
 		if len(tasks) > 0 {
+			log.Printf("[DEBUG] Analisando %d tarefas", len(tasks))
 			results = analyzeData(tasks)
 		}
 
@@ -344,16 +372,30 @@ func main() {
 		var taskDisplays []TaskDisplay
 		if showDetails && len(tasks) > 0 {
 			for _, task := range tasks {
+				// Para casos onde não há duração ou taxa (como Mission Reward)
+				rateDisplay := "-"
+				durationDisplay := task.Duration
+				durationMinsDisplay := "-"
+
+				if task.Duration != "-" && task.Duration != "" {
+					durationMinsDisplay = fmt.Sprintf("%.2f mins", task.DurationMins)
+				}
+
+				if task.Rate > 0 {
+					rateDisplay = fmt.Sprintf("$%.2f/hr", task.Rate)
+				}
+
+				log.Printf("[DEBUG] Adicionando tarefa tipo=%s para exibição", task.Type)
 				taskDisplays = append(taskDisplays, TaskDisplay{
 					Date:         task.Date,
 					ID:           task.ID,
 					Category:     task.Category,
-					Duration:     task.Duration,
-					Rate:         fmt.Sprintf("$%.2f/hr", task.Rate),
+					Duration:     durationDisplay,
+					Rate:         rateDisplay,
 					Value:        fmt.Sprintf("$%.2f", task.Value),
 					Type:         task.Type,
 					Status:       task.Status,
-					DurationMins: fmt.Sprintf("%.2f mins", task.DurationMins),
+					DurationMins: durationMinsDisplay,
 				})
 			}
 		}
@@ -367,32 +409,34 @@ func main() {
 			ShowDetails: showDetails,
 			Tasks:       taskDisplays,
 		}
-		
+		log.Printf("[DEBUG] Template data: HasResults=%v, ShowDetails=%v, Total de tarefas=%d",
+			data.HasResults, data.ShowDetails, len(data.Tasks))
+
 		// Format results for display if we have any
 		if len(tasks) > 0 {
 			totalHoursValue := results["TotalHours"].(float64)
 			totalHoursInt := int(totalHoursValue)
 			totalMinutes := int((totalHoursValue - float64(totalHoursInt)) * 60)
-			
+
 			// Format detailed hour breakdowns
 			taskHoursValue := results["TaskHours"].(float64)
 			taskHoursInt := int(taskHoursValue)
 			taskMinutes := int((taskHoursValue - float64(taskHoursInt)) * 60)
-			
+
 			exceededTimeHoursValue := results["ExceededTimeHours"].(float64)
 			exceededTimeHoursInt := int(exceededTimeHoursValue)
 			exceededTimeMinutes := int((exceededTimeHoursValue - float64(exceededTimeHoursInt)) * 60)
-			
+
 			otherHoursValue := results["OtherHours"].(float64)
 			otherHoursInt := int(otherHoursValue)
 			otherMinutes := int((otherHoursValue - float64(otherHoursInt)) * 60)
-			
+
 			// Format average metrics
 			avgTimePerTaskValue := results["AvgTimePerTask"].(float64)
 			avgTimeMinutes := int(avgTimePerTaskValue)
 			avgTimeSeconds := int((avgTimePerTaskValue - float64(avgTimeMinutes)) * 60)
 			avgValuePerTaskValue := results["AvgValuePerTask"].(float64)
-			
+
 			// Calculate hour percentages for progress bars
 			var hourPercentages []float64
 			if totalHoursValue > 0 {
@@ -404,7 +448,7 @@ func main() {
 				// Default values if no hours (shouldn't happen, but just in case)
 				hourPercentages = []float64{0, 0, 0}
 			}
-			
+
 			// Set the values in the template data
 			data.TotalTasks = results["TotalTasks"].(int)
 			data.TotalHours = fmt.Sprintf("%.2f horas (%dh %dmin)", totalHoursValue, totalHoursInt, totalMinutes)
@@ -413,16 +457,16 @@ func main() {
 			data.ExceededTimeValue = fmt.Sprintf("%.2f", results["ExceededTimeValue"].(float64))
 			data.OtherValue = fmt.Sprintf("%.2f", results["OtherValue"].(float64))
 			data.AverageHourlyRate = fmt.Sprintf("%.2f", results["AverageHourlyRate"].(float64))
-			
+
 			// Set detailed hour breakdowns
 			data.TaskHours = fmt.Sprintf("%.2f horas (%dh %dmin)", taskHoursValue, taskHoursInt, taskMinutes)
 			data.ExceededTimeHours = fmt.Sprintf("%.2f horas (%dh %dmin)", exceededTimeHoursValue, exceededTimeHoursInt, exceededTimeMinutes)
 			data.OtherHours = fmt.Sprintf("%.2f horas (%dh %dmin)", otherHoursValue, otherHoursInt, otherMinutes)
-			
+
 			// Set average metrics
 			data.AvgTimePerTask = fmt.Sprintf("%dm %ds", avgTimeMinutes, avgTimeSeconds)
 			data.AvgValuePerTask = fmt.Sprintf("$%.2f", avgValuePerTaskValue)
-			
+
 			// Set hour percentages for progress bars
 			data.RawHourPercentages = hourPercentages
 		}
@@ -441,7 +485,7 @@ func main() {
 
 	// Create server with reasonable timeouts
 	srv := &http.Server{
-		Addr:         ":"+port,
+		Addr:         ":" + port,
 		Handler:      nil, // Use default mux
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
@@ -476,7 +520,9 @@ func main() {
 
 func parseInput(input string) []Task {
 	var tasks []Task
+	log.Printf("[DEBUG] Iniciando parseInput com %d caracteres de texto", len(input))
 	lines := strings.Split(input, "\n")
+	log.Printf("[DEBUG] Dividido em %d linhas", len(lines))
 
 	for i := 0; i < len(lines); {
 		// Skip empty lines
@@ -487,6 +533,7 @@ func parseInput(input string) []Task {
 
 		task, advance := parseTask(lines[i:])
 		if task != nil {
+			log.Printf("[DEBUG] Tarefa encontrada: Type=%s", task.Type)
 			tasks = append(tasks, *task)
 		}
 		i += advance
@@ -606,7 +653,7 @@ func analyzeData(tasks []Task) map[string]interface{} {
 		} else if task.Type == "Exceeded Time" {
 			exceededTimeHours += task.DurationMins / 60
 			totalHours += task.DurationMins / 60
-		} else if task.Type == "Operation" {
+		} else if task.Type == "Operation" || task.Type == "Mission Reward" {
 			otherHours += task.DurationMins / 60
 			totalHours += task.DurationMins / 60
 		}
@@ -654,7 +701,7 @@ func analyzeData(tasks []Task) map[string]interface{} {
 		"ExceededTimeHours": exceededTimeHours,
 		"OtherHours":        otherHours,
 		// Average metrics
-		"AvgTimePerTask":     avgTimePerTask,
-		"AvgValuePerTask":    avgValuePerTask,
+		"AvgTimePerTask":  avgTimePerTask,
+		"AvgValuePerTask": avgValuePerTask,
 	}
 }
