@@ -108,6 +108,8 @@ type TemplateData struct {
 	// Average metrics
 	AvgTimePerTask      string
 	AvgValuePerTask     string
+	// For visualization
+	RawHourPercentages  []float64
 	// Task details
 	ShowDetails         bool
 	Tasks               []TaskDisplay
@@ -391,6 +393,18 @@ func main() {
 			avgTimeSeconds := int((avgTimePerTaskValue - float64(avgTimeMinutes)) * 60)
 			avgValuePerTaskValue := results["AvgValuePerTask"].(float64)
 			
+			// Calculate hour percentages for progress bars
+			var hourPercentages []float64
+			if totalHoursValue > 0 {
+				taskPercentage := (taskHoursValue / totalHoursValue) * 100
+				exceededPercentage := (exceededTimeHoursValue / totalHoursValue) * 100
+				otherPercentage := (otherHoursValue / totalHoursValue) * 100
+				hourPercentages = []float64{taskPercentage, exceededPercentage, otherPercentage}
+			} else {
+				// Default values if no hours (shouldn't happen, but just in case)
+				hourPercentages = []float64{0, 0, 0}
+			}
+			
 			// Set the values in the template data
 			data.TotalTasks = results["TotalTasks"].(int)
 			data.TotalHours = fmt.Sprintf("%.2f horas (%dh %dmin)", totalHoursValue, totalHoursInt, totalMinutes)
@@ -408,6 +422,9 @@ func main() {
 			// Set average metrics
 			data.AvgTimePerTask = fmt.Sprintf("%dm %ds", avgTimeMinutes, avgTimeSeconds)
 			data.AvgValuePerTask = fmt.Sprintf("$%.2f", avgValuePerTaskValue)
+			
+			// Set hour percentages for progress bars
+			data.RawHourPercentages = hourPercentages
 		}
 
 		tmpl.Execute(w, data)

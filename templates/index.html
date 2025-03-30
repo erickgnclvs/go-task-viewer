@@ -4,47 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analisador de Tarefas</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --primary-color: #3498db;
-            --primary-hover: #2980b9;
-            --secondary-color: #34495e;
-            --secondary-hover: #2c3e50;
-            --success-color: #2ecc71;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --light-bg: #f7f9fc;
+            --primary-color: #4361ee;
+            --primary-hover: #3a56d4;
+            --secondary-color: #2d3748;
+            --secondary-hover: #1a202c;
+            --success-color: #38b2ac;
+            --warning-color: #ed8936;
+            --danger-color: #e53e3e;
+            --light-bg: #f7fafc;
             --container-bg: #fff;
-            --border-color: #ddd;
-            --text-color: #333;
-            --text-light: #7f8c8d;
+            --border-color: #e2e8f0;
+            --text-color: #2d3748;
+            --text-light: #718096;
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --task-color: #4361ee;
+            --exceeded-color: #ed8936;
+            --other-color: #9c65ca;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
             line-height: 1.6;
             color: var(--text-color);
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
             background-color: var(--light-bg);
         }
         h1 {
-            color: #2c3e50;
+            color: var(--secondary-color);
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            font-weight: 700;
+            font-size: 2.2rem;
+            letter-spacing: -0.5px;
         }
         h2 {
-            color: #2c3e50;
+            color: var(--secondary-color);
             margin-top: 0;
-            font-size: 20px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-top: 20px;
+            margin-bottom: 15px;
         }
         .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        .page-header {
             background-color: var(--container-bg);
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px;
             margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .card {
+            background-color: var(--container-bg);
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
         /* Input methods styling */
@@ -190,26 +228,174 @@
         }
         .results {
             margin-top: 30px;
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 6px;
-            border-left: 4px solid #3498db;
         }
-        .results h2 {
-            color: #2c3e50;
-            margin-top: 0;
-            font-size: 20px;
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
         }
-        .result-item {
-            margin-bottom: 10px;
+        
+        .metric-card {
+            grid-column: span 4;
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 25px 20px;
+            position: relative;
+            overflow: hidden;
+            min-height: 140px;
+            background-color: var(--container-bg);
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .metric-icon {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            opacity: 0.9;
+            color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.1);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin-bottom: 5px;
+            line-height: 1.2;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0;
+        }
+        
+        .section-card {
+            grid-column: span 6;
+            background-color: var(--container-bg);
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-item:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
         .result-label {
-            font-weight: bold;
-            min-width: 250px;
+            font-weight: 500;
+            color: var(--text-light);
         }
+        
         .result-value {
-            flex-grow: 1;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+        
+        .progress-container {
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background-color: #e2e8f0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 5px;
+        }
+        
+        .task-fill {
+            background-color: var(--task-color);
+        }
+        
+        .exceeded-fill {
+            background-color: var(--exceeded-color);
+        }
+        
+        .other-fill {
+            background-color: var(--other-color);
+        }
+        
+        .distribution-legend {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        
+        .task-color {
+            background-color: var(--task-color);
+        }
+        
+        .exceeded-color {
+            background-color: var(--exceeded-color);
+        }
+        
+        .other-color {
+            background-color: var(--other-color);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 250px;
+            }
         }
         .separator {
             border-top: 1px solid #eee;
@@ -483,11 +669,14 @@
     </script>
 </head>
 <body>
-    <div class="container">
+    <div class="page-header">
         <h1>Analisador de Tarefas</h1>
         <div class="how-to-use-button-container">
             <button type="button" id="howToUseButton" class="how-to-use-button">Como Usar</button>
         </div>
+    </div>
+    
+    <div class="container">
         
         <form action="/analyze" method="post" enctype="multipart/form-data">
             <div class="input-methods">
@@ -520,73 +709,129 @@
         
         {{ if .HasResults }}
         <div class="results">
-            <h2>RESULTADOS</h2>
-            <div class="separator"></div>
+            <h2>Visão Geral</h2>
             
-            <div class="result-item">
-                <div class="result-label">Número total de tarefas:</div>
-                <div class="result-value">{{ .TotalTasks }}</div>
+            <!-- Dashboard cards for key metrics -->
+            <div class="results-grid">
+                <!-- Total Tasks Card -->
+                <div class="metric-card">
+                    <div class="metric-icon">📊</div>
+                    <div class="metric-value">{{ .TotalTasks }}</div>
+                    <div class="metric-label">Tarefas Totais</div>
+                </div>
+                
+                <!-- Total Hours Card -->
+                <div class="metric-card">
+                    <div class="metric-icon">⏱️</div>
+                    <div class="metric-value">{{ .TotalHours }}</div>
+                    <div class="metric-label">Horas Trabalhadas</div>
+                </div>
+                
+                <!-- Total Value Card -->
+                <div class="metric-card">
+                    <div class="metric-icon">💰</div>
+                    <div class="metric-value">${{ .TotalValue }}</div>
+                    <div class="metric-label">Valor Total</div>
+                </div>
             </div>
             
-            <div class="result-item">
-                <div class="result-label">Total de horas trabalhadas:</div>
-                <div class="result-value">{{ .TotalHours }}</div>
+            <div class="results-grid">
+                <!-- Average Metrics Card -->
+                <div class="section-card">
+                    <h2>Médias por Tarefa</h2>
+                    <div class="separator"></div>
+                    
+                    <div class="result-item">
+                        <div class="result-label">Tempo médio por tarefa</div>
+                        <div class="result-value">{{ .AvgTimePerTask }}</div>
+                    </div>
+                    
+                    <div class="result-item">
+                        <div class="result-label">Valor médio por tarefa</div>
+                        <div class="result-value">{{ .AvgValuePerTask }}</div>
+                    </div>
+                    
+                    <div class="result-item">
+                        <div class="result-label">Valor médio por hora</div>
+                        <div class="result-value">${{ .AverageHourlyRate }}/hora</div>
+                    </div>
+                </div>
+                
+                <!-- Value Breakdown Card -->
+                <div class="section-card">
+                    <h2>Distribuição de Valores</h2>
+                    <div class="separator"></div>
+                    
+                    <div class="result-item">
+                        <div class="result-label">Tarefas (Task)</div>
+                        <div class="result-value">${{ .TasksValue }}</div>
+                    </div>
+                    
+                    <div class="result-item">
+                        <div class="result-label">Tempo Excedido</div>
+                        <div class="result-value">${{ .ExceededTimeValue }}</div>
+                    </div>
+                    
+                    <div class="result-item">
+                        <div class="result-label">Outros</div>
+                        <div class="result-value">${{ .OtherValue }}</div>
+                    </div>
+                </div>
             </div>
             
-            <div class="result-item">
-                <div class="result-label">Valor total arrecadado:</div>
-                <div class="result-value">${{ .TotalValue }}</div>
-            </div>
-            
-            <div class="result-item">
-                <div class="result-label">- Tarefas (Task):</div>
-                <div class="result-value">${{ .TasksValue }}</div>
-            </div>
-            
-            <div class="result-item">
-                <div class="result-label">- Tempo Excedido (Exceeded Time):</div>
-                <div class="result-value">${{ .ExceededTimeValue }}</div>
-            </div>
-            
-            <div class="result-item">
-                <div class="result-label">- Outros:</div>
-                <div class="result-value">${{ .OtherValue }}</div>
-            </div>
-            
-            <div class="result-item">
-                <div class="result-label">Valor médio por hora:</div>
-                <div class="result-value">${{ .AverageHourlyRate }}/hora</div>
-            </div>
-            
-            <h3>Detalhamento de Horas por Tipo</h3>
-            <div class="separator"></div>
-            
-            <div class="result-item">
-                <div class="result-label">Horas em Tarefas (Task):</div>
-                <div class="result-value">{{ .TaskHours }}</div>
-            </div>
-            
-            <div class="result-item">
-                <div class="result-label">Horas em Tempo Excedido:</div>
-                <div class="result-value">{{ .ExceededTimeHours }}</div>
-            </div>
-            
-            <div class="result-item">
-                <div class="result-label">Horas em Outros:</div>
-                <div class="result-value">{{ .OtherHours }}</div>
-            </div>
-            
-            <h3>Médias por Tarefa</h3>
-            <div class="separator"></div>
-            
-            <div class="result-item">
-                <div class="result-label">Tempo médio por tarefa:</div>
-                <div class="result-value">{{ .AvgTimePerTask }}</div>
-            </div>
-            
-            <div class="result-item">
-                <div class="result-label">Valor médio por tarefa:</div>
-                <div class="result-value">{{ .AvgValuePerTask }}</div>
+            <!-- Charts Section -->
+            <div class="results-grid">
+                <!-- Hours Breakdown Section with Pie Chart -->
+                <div class="section-card" style="grid-column: span 6;">
+                    <h2>Detalhamento de Horas por Tipo</h2>
+                    <div class="separator"></div>
+                    
+                    <div class="chart-container">
+                        <canvas id="hoursChart" width="400" height="400"></canvas>
+                    </div>
+                    
+                    <!-- Hours Details -->
+                    <div class="result-item">
+                        <div class="result-label">Horas em Tarefas (Task)</div>
+                        <div class="result-value">{{ .TaskHours }}</div>
+                    </div>
+                    
+                    <div class="result-item">
+                        <div class="result-label">Horas em Tempo Excedido</div>
+                        <div class="result-value">{{ .ExceededTimeHours }}</div>
+                    </div>
+                    
+                    <div class="result-item">
+                        <div class="result-label">Horas em Outros</div>
+                        <div class="result-value">{{ .OtherHours }}</div>
+                    </div>
+                </div>
+                
+                <!-- Value Distribution Section with Pie Chart -->
+                <div class="section-card" style="grid-column: span 6;">
+                    <h2>Distribuição de Valores</h2>
+                    <div class="separator"></div>
+                    
+                    <div class="chart-container">
+                        <canvas id="valuesChart" width="400" height="400"></canvas>
+                    </div>
+                    
+                    <!-- Value Details -->
+                    <div class="result-item">
+                        <div class="result-label">Tarefas (Task)</div>
+                        <div class="result-value">${{ .TasksValue }}</div>
+                    </div>
+                    
+                    <div class="result-item">
+                        <div class="result-label">Tempo Excedido</div>
+                        <div class="result-value">${{ .ExceededTimeValue }}</div>
+                    </div>
+                    
+                    <div class="result-item">
+                        <div class="result-label">Outros</div>
+                        <div class="result-value">${{ .OtherValue }}</div>
+                    </div>
+                </div>
             </div>
             
             <div class="details-button-container">
@@ -596,6 +841,126 @@
                     <input type="hidden" id="showDetailsInput" name="showDetails" value="{{ if .ShowDetails }}on{{ else }}off{{ end }}">
                 </form>
             </div>
+            
+            {{/* Add hidden data for JavaScript charts */}}
+            <div id="chartDataContainer" style="display: none;" 
+                data-task-percent="{{ index .RawHourPercentages 0 }}"
+                data-exceeded-percent="{{ index .RawHourPercentages 1 }}"
+                data-other-percent="{{ index .RawHourPercentages 2 }}"
+                data-task-value="{{ .TasksValue }}"
+                data-exceeded-value="{{ .ExceededTimeValue }}"
+                data-other-value="{{ .OtherValue }}">
+            </div>
+            
+            <script>
+                // Initialize charts when the page loads
+                document.addEventListener('DOMContentLoaded', function() {
+                    const dataContainer = document.getElementById('chartDataContainer');
+                    if (dataContainer) {
+                        // Get hour percentages for the hours chart
+                        const taskHoursPercent = parseFloat(dataContainer.getAttribute('data-task-percent')) || 0;
+                        const exceededHoursPercent = parseFloat(dataContainer.getAttribute('data-exceeded-percent')) || 0;
+                        const otherHoursPercent = parseFloat(dataContainer.getAttribute('data-other-percent')) || 0;
+                        
+                        // Get values for the values chart
+                        const taskValue = parseFloat(dataContainer.getAttribute('data-task-value').replace(/[^0-9.]/g, '')) || 0;
+                        const exceededValue = parseFloat(dataContainer.getAttribute('data-exceeded-value').replace(/[^0-9.]/g, '')) || 0;
+                        const otherValue = parseFloat(dataContainer.getAttribute('data-other-value').replace(/[^0-9.]/g, '')) || 0;
+                        
+                        // Create hours chart
+                        const hoursChartCtx = document.getElementById('hoursChart').getContext('2d');
+                        const hoursChart = new Chart(hoursChartCtx, {
+                            type: 'pie',
+                            data: {
+                                labels: ['Tarefas', 'Tempo Excedido', 'Outros'],
+                                datasets: [{
+                                    data: [taskHoursPercent, exceededHoursPercent, otherHoursPercent],
+                                    backgroundColor: [
+                                        'rgba(67, 97, 238, 0.8)',  // Task (blue)
+                                        'rgba(237, 137, 54, 0.8)', // Exceeded (orange)
+                                        'rgba(156, 101, 202, 0.8)'  // Other (purple)
+                                    ],
+                                    borderColor: [
+                                        'rgba(67, 97, 238, 1)',
+                                        'rgba(237, 137, 54, 1)',
+                                        'rgba(156, 101, 202, 1)'
+                                    ],
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom'
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Distribuição de Horas por Tipo',
+                                        font: {
+                                            size: 16
+                                        }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                return context.label + ': ' + context.raw.toFixed(2) + '%';
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // Create values chart
+                        const valuesChartCtx = document.getElementById('valuesChart').getContext('2d');
+                        const valuesChart = new Chart(valuesChartCtx, {
+                            type: 'pie',
+                            data: {
+                                labels: ['Tarefas', 'Tempo Excedido', 'Outros'],
+                                datasets: [{
+                                    data: [taskValue, exceededValue, otherValue],
+                                    backgroundColor: [
+                                        'rgba(67, 97, 238, 0.8)',  // Task (blue)
+                                        'rgba(237, 137, 54, 0.8)', // Exceeded (orange)
+                                        'rgba(156, 101, 202, 0.8)'  // Other (purple)
+                                    ],
+                                    borderColor: [
+                                        'rgba(67, 97, 238, 1)',
+                                        'rgba(237, 137, 54, 1)',
+                                        'rgba(156, 101, 202, 1)'
+                                    ],
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom'
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Distribuição de Valores',
+                                        font: {
+                                            size: 16
+                                        }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                return context.label + ': $' + context.raw.toFixed(2);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            </script>
         </div>
         
         {{ if and .HasResults .ShowDetails }}
