@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"html/template"
@@ -8,8 +9,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -245,8 +248,32 @@ func main() {
 		port = "8080"
 	}
 
-	// Load templates
-	tmpl := template.Must(template.ParseFiles("templates/index.html"))
+	// Look for templates in multiple locations (local dev vs production)
+	var tmplPath string
+	templateLocations := []string{
+		"templates/index.html",  // Local development
+		"/templates/index.html", // Railway deployment
+		"./templates/index.html", // Alternative path
+	}
+
+	// Try each location until we find the template
+	var tmpl *template.Template
+	var err error
+	for _, loc := range templateLocations {
+		log.Printf("Trying to load template from: %s\n", loc)
+		tmpl, err = template.ParseFiles(loc)
+		if err == nil {
+			tmplPath = loc
+			break
+		}
+	}
+
+	// Check if we found the template
+	if tmpl == nil {
+		log.Fatalf("Failed to load template from any location: %v\n", err)
+	}
+
+	log.Printf("Successfully loaded template from: %s\n", tmplPath)
 
 	// Handle root path - show the form
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -350,9 +377,45 @@ func main() {
 		tmpl.Execute(w, data)
 	})
 
-	// Start server
-	log.Printf("Servidor iniciado na porta %s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	// Add health check endpoint for Railway
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	// Create server with reasonable timeouts
+	srv := &http.Server{
+		Addr:         ":"+port,
+		Handler:      nil, // Use default mux
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// Start server in a goroutine so it doesn't block
+	go func() {
+		log.Printf("Servidor iniciado na porta %s\n", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server error: %v\n", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+
+	// Block until signal is received
+	sig := <-c
+	log.Printf("Received signal %v, shutting down\n", sig)
+
+	// Create a deadline to wait for.
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	// Doesn't block if no connections, but will otherwise wait
+	// until the timeout deadline.
+	srv.Shutdown(ctx)
+	log.Println("Server gracefully stopped")
 }
 
 func parseInput(input string) []Task {
