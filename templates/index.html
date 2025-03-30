@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador de Tarefas</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-hover: #2980b9;
+            --secondary-color: #34495e;
+            --secondary-hover: #2c3e50;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-bg: #f7f9fc;
+            --container-bg: #fff;
+            --border-color: #ddd;
+            --text-color: #333;
+            --text-light: #7f8c8d;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--light-bg);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            font-size: 20px;
+        }
+        .container {
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        /* Input methods styling */
+        .input-methods {
+            margin-bottom: 20px;
+        }
+        
+        .input-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .tab-button {
+            background-color: transparent;
+            color: var(--text-color);
+            border: none;
+            padding: 10px 20px;
+            margin-right: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            font-weight: bold;
+        }
+        
+        .input-panel {
+            display: none;
+        }
+        
+        /* Text area styling */
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            resize: vertical;
+            font-family: monospace;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        /* File upload styling */
+        .file-upload-container {
+            width: 100%;
+            min-height: 200px;
+            margin-bottom: 15px;
+        }
+        
+        .file-upload-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 200px;
+            border: 2px dashed var(--border-color);
+            border-radius: 4px;
+            background-color: rgba(52, 152, 219, 0.05);
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .file-upload-area.highlight {
+            border-color: var(--primary-color);
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .file-upload-area p {
+            margin: 5px 0;
+            color: var(--text-light);
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .file-input-label {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 10px 0;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .file-input-label:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .file-name {
+            margin-top: 10px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        /* Button styling */
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .analyze-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: var(--secondary-color);
+        }
+        
+        .analyze-button:hover {
+            background-color: var(--secondary-hover);
+        }
+        .options {
+            margin-bottom: 15px;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .checkbox-text {
+            margin-left: 8px;
+        }
+        .results {
+            margin-top: 30px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        .results h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            font-size: 20px;
+        }
+        .result-item {
+            margin-bottom: 10px;
+            display: flex;
+        }
+        .result-label {
+            font-weight: bold;
+            min-width: 250px;
+        }
+        .result-value {
+            flex-grow: 1;
+        }
+        .separator {
+            border-top: 1px solid #eee;
+            margin: 15px 0;
+        }
+        .task-details {
+            margin-top: 30px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #e74c3c;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .task-id {
+            font-family: monospace;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        .task-type {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .task-type.task {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .task-type.exceeded {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .task-type.other {
+            background-color: #f39c12;
+            color: white;
+        }
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .details-button-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .details-button {
+            background-color: #34495e;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+        .details-button:hover {
+            background-color: #2c3e50;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tab switching functionality
+            const textTab = document.getElementById('text-tab');
+            const fileTab = document.getElementById('file-tab');
+            const textPanel = document.getElementById('text-panel');
+            const filePanel = document.getElementById('file-panel');
+            
+            textTab.addEventListener('click', function() {
+                textTab.classList.add('active');
+                fileTab.classList.remove('active');
+                textPanel.style.display = 'block';
+                filePanel.style.display = 'none';
+            });
+            
+            fileTab.addEventListener('click', function() {
+                fileTab.classList.add('active');
+                textTab.classList.remove('active');
+                filePanel.style.display = 'block';
+                textPanel.style.display = 'none';
+            });
+            
+            // File upload functionality
+            const dropArea = document.getElementById('drop-area');
+            const fileInput = document.getElementById('file-input');
+            const fileName = document.getElementById('file-name');
+            
+            // Prevent defaults for drag events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            // Highlight drop area when dragging over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                dropArea.classList.add('highlight');
+            }
+            
+            function unhighlight() {
+                dropArea.classList.remove('highlight');
+            }
+            
+            // Handle file drop
+            dropArea.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                fileInput.files = files;
+                updateFileName();
+            }
+            
+            // Handle file input change
+            fileInput.addEventListener('change', updateFileName);
+            
+            function updateFileName() {
+                if (fileInput.files.length > 0) {
+                    fileName.textContent = fileInput.files[0].name;
+                }
+            }
+            
+            // Add event listener to the toggle details button if it exists
+            const toggleButton = document.getElementById('toggleDetails');
+            if (toggleButton) {
+                toggleButton.addEventListener('click', function() {
+                    const detailsForm = document.getElementById('detailsForm');
+                    const showDetailsInput = document.getElementById('showDetailsInput');
+                    
+                    // Toggle the value
+                    if (showDetailsInput.value === 'on') {
+                        showDetailsInput.value = 'off';
+                    } else {
+                        showDetailsInput.value = 'on';
+                    }
+                    
+                    // Submit the form
+                    detailsForm.submit();
+                });
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Analisador de Tarefas</h1>
+        
+        <form action="/analyze" method="post" enctype="multipart/form-data">
+            <div class="input-methods">
+                <div class="input-tabs">
+                    <button type="button" class="tab-button active" id="text-tab">Colar Texto</button>
+                    <button type="button" class="tab-button" id="file-tab">Carregar CSV</button>
+                </div>
+                
+                <div class="input-panel" id="text-panel" style="display: block;">
+                    <textarea name="taskData" placeholder="Cole o texto do relatório aqui...">{{ .RawInput }}</textarea>
+                </div>
+                
+                <div class="input-panel" id="file-panel" style="display: none;">
+                    <div class="file-upload-container">
+                        <div class="file-upload-area" id="drop-area">
+                            <p>Arraste e solte o arquivo CSV aqui</p>
+                            <p>ou</p>
+                            <label for="file-input" class="file-input-label">Escolher Arquivo</label>
+                            <input type="file" name="csvFile" id="file-input" accept=".csv" />
+                            <p id="file-name" class="file-name"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <button type="submit" class="analyze-button">Analisar</button>
+            </div>
+        </form>
+        
+        {{ if .HasResults }}
+        <div class="results">
+            <h2>RESULTADOS</h2>
+            <div class="separator"></div>
+            
+            <div class="result-item">
+                <div class="result-label">Número total de tarefas:</div>
+                <div class="result-value">{{ .TotalTasks }}</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Total de horas trabalhadas:</div>
+                <div class="result-value">{{ .TotalHours }}</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Valor total arrecadado:</div>
+                <div class="result-value">${{ .TotalValue }}</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">- Tarefas (Task):</div>
+                <div class="result-value">${{ .TasksValue }}</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">- Tempo Excedido (Exceeded Time):</div>
+                <div class="result-value">${{ .ExceededTimeValue }}</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">- Outros:</div>
+                <div class="result-value">${{ .OtherValue }}</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Valor médio por hora:</div>
+                <div class="result-value">${{ .AverageHourlyRate }}/hora</div>
+            </div>
+            
+            <div class="details-button-container">
+                <button id="toggleDetails" class="details-button">{{ if .ShowDetails }}Ocultar Detalhes{{ else }}Mostrar Detalhes{{ end }}</button>
+                <form id="detailsForm" action="/analyze" method="post">
+                    <input type="hidden" name="taskData" value="{{ .RawInput }}">
+                    <input type="hidden" id="showDetailsInput" name="showDetails" value="{{ if .ShowDetails }}on{{ else }}off{{ end }}">
+                </form>
+            </div>
+        </div>
+        
+        {{ if and .HasResults .ShowDetails }}
+        <div class="task-details">
+            <h2>Detalhes das Tarefas</h2>
+            <div class="separator"></div>
+            
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>ID</th>
+                            <th>Categoria</th>
+                            <th>Duração</th>
+                            <th>Taxa</th>
+                            <th>Valor</th>
+                            <th>Tipo</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range .Tasks }}
+                        <tr>
+                            <td>{{ .Date }}</td>
+                            <td><span class="task-id">{{ .ID }}</span></td>
+                            <td>{{ .Category }}</td>
+                            <td>{{ .Duration }}</td>
+                            <td>{{ .Rate }}</td>
+                            <td>{{ .Value }}</td>
+                            <td>
+                                <span class="task-type {{ if eq .Type "Task" }}task{{ else if eq .Type "Exceeded Time" }}exceeded{{ else }}other{{ end }}">
+                                    {{ .Type }}
+                                </span>
+                            </td>
+                            <td>{{ .Status }}</td>
+                        </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {{ end }}
+        {{ end }}
+    </div>
+    
+    <footer>
+        <p>Analisador de Tarefas &copy; {{ .CurrentYear }} - Desenvolvido em Go</p>
+    </footer>
+</body>
+</html>

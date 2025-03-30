@@ -1,0 +1,9 @@
+[build]
+builder = "nixpacks"
+cmdOverride = "go build -o app"
+
+[deploy]
+startCommand = "./app"
+numReplicas = 1
+healthcheckPath = "/"
+healthcheckTimeout = 300
