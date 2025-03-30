@@ -2,6 +2,10 @@
 
 A web application for analyzing task data and generating reports. Built with Go and designed to be deployed on Railway.
 
+## Demo
+
+![Task Viewer Demo](data/howto.gif)
+
 ## Features
 
 - Upload task data via text input or CSV file

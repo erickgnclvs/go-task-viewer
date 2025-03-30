@@ -290,6 +290,81 @@
         .details-button:hover {
             background-color: #2c3e50;
         }
+        
+        /* How to Use button styling */
+        .how-to-use-button-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .how-to-use-button {
+            background-color: var(--success-color);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .how-to-use-button:hover {
+            background-color: #27ae60;
+        }
+        
+        /* Modal styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 850px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        
+        .close-button {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        
+        .close-button:hover {
+            color: var(--danger-color);
+        }
+        
+        .gif-container {
+            margin: 20px 0;
+            text-align: center;
+            overflow: hidden;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .gif-container img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
     </style>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -382,12 +457,37 @@
                     detailsForm.submit();
                 });
             }
+            
+            // Modal functionality for How to Use button
+            const modal = document.getElementById('howToUseModal');
+            const howToUseBtn = document.getElementById('howToUseButton');
+            const closeBtn = document.querySelector('.close-button');
+            
+            // Open modal when button is clicked
+            howToUseBtn.addEventListener('click', function() {
+                modal.style.display = 'block';
+            });
+            
+            // Close modal when close button is clicked
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside of it
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
         });
     </script>
 </head>
 <body>
     <div class="container">
         <h1>Analisador de Tarefas</h1>
+        <div class="how-to-use-button-container">
+            <button type="button" id="howToUseButton" class="how-to-use-button">Como Usar</button>
+        </div>
         
         <form action="/analyze" method="post" enctype="multipart/form-data">
             <div class="input-methods">
@@ -514,5 +614,16 @@
     <footer>
         <p>Analisador de Tarefas &copy; {{ .CurrentYear }} - Desenvolvido em Go</p>
     </footer>
+
+    <!-- How to Use Modal -->
+    <div id="howToUseModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Como Usar</h2>
+            <div class="gif-container">
+                <img src="/data/howto.gif" alt="Demonstração de uso" width="800" height="512">
+            </div>
+        </div>
+    </div>
 </body>
 </html>

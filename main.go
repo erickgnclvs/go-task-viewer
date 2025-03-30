@@ -383,6 +383,9 @@ func main() {
 		w.Write([]byte("OK"))
 	})
 
+	// Serve static files from the data directory
+	http.Handle("/data/", http.StripPrefix("/data/", http.FileServer(http.Dir("data"))))
+
 	// Create server with reasonable timeouts
 	srv := &http.Server{
 		Addr:         ":"+port,
