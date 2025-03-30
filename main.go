@@ -535,8 +535,8 @@ func analyzeData(tasks []Task) map[string]interface{} {
 			totalTasks++
 		}
 
-		// Include both Task and Exceeded Time in total hours calculation
-		if task.Type == "Task" || task.Type == "Exceeded Time" {
+		// Include Task, Exceeded Time, and Operation in total hours calculation
+		if task.Type == "Task" || task.Type == "Exceeded Time" || task.Type == "Operation" {
 			totalHours += task.DurationMins / 60
 		}
 
