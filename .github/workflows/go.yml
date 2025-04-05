@@ -19,7 +19,7 @@ jobs:
         cache: true
 
     - name: Build
-      run: go build -v -o app
+      run: go build -v -o app ./cmd/server
 
     - name: Test
       run: go test -v ./...
