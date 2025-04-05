@@ -27,6 +27,4 @@ go.work
 .DS_Store
 Thumbs.db
 
-# Binary
-app
 go-task-viewer

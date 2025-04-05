@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "./out"
+startCommand = "./server"
 numReplicas = 1
 healthcheckPath = "/health"
 healthcheckTimeout = 300
