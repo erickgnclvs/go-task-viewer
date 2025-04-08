@@ -10,7 +10,7 @@ import (
 	"github.com/erickgnclvs/go-task-viewer/internal/types"
 )
 
-// ParseTime converts a time string (e.g., "1h 30m", "45m", "15s") into total minutes.
+// ParseTime function remains the same...
 func ParseTime(timeStr string) float64 {
 	// Skip empty or placeholder values
 	if timeStr == "" || timeStr == "-" {
@@ -23,54 +23,48 @@ func ParseTime(timeStr string) float64 {
 	// Initialize total minutes
 	totalMinutes := 0.0
 
-	// Handle hours
-	if strings.Contains(timeStr, "h") {
-		parts := strings.Split(timeStr, "h")
-		hourStr := strings.TrimSpace(parts[0])
+	// Handle hours (more robustly - find 'h' first)
+	hourParts := strings.SplitN(timeStr, "h", 2)
+	if len(hourParts) == 2 {
+		hourStr := strings.TrimSpace(hourParts[0])
 		hours, err := strconv.ParseFloat(hourStr, 64)
 		if err == nil {
 			totalMinutes += hours * 60
 		}
-
-		// If there's content after 'h', update timeStr to process it
-		if len(parts) > 1 {
-			timeStr = strings.TrimSpace(parts[1])
-		} else {
-			timeStr = ""
-		}
+		timeStr = strings.TrimSpace(hourParts[1]) // Remaining part
 	}
 
-	// Handle minutes
-	if strings.Contains(timeStr, "m") {
-		parts := strings.Split(timeStr, "m")
-		minuteStr := strings.TrimSpace(parts[0])
+	// Handle minutes (find 'm' first)
+	minuteParts := strings.SplitN(timeStr, "m", 2)
+	if len(minuteParts) == 2 {
+		minuteStr := strings.TrimSpace(minuteParts[0])
 		minutes, err := strconv.ParseFloat(minuteStr, 64)
 		if err == nil {
 			totalMinutes += minutes
 		}
-
-		// If there's content after 'm', update timeStr to process it
-		if len(parts) > 1 {
-			timeStr = strings.TrimSpace(parts[1])
-		} else {
-			timeStr = ""
-		}
+		timeStr = strings.TrimSpace(minuteParts[1]) // Remaining part
 	}
 
-	// Handle seconds
-	if strings.Contains(timeStr, "s") {
-		parts := strings.Split(timeStr, "s")
-		secondStr := strings.TrimSpace(parts[0])
+	// Handle seconds (find 's' first)
+	secondParts := strings.SplitN(timeStr, "s", 2)
+	if len(secondParts) == 2 {
+		secondStr := strings.TrimSpace(secondParts[0])
 		seconds, err := strconv.ParseFloat(secondStr, 64)
 		if err == nil {
 			totalMinutes += seconds / 60
 		}
+		// No remaining part needed after seconds usually
 	}
+
+	// Handle cases where only numbers are present (assume minutes?) - Optional
+	// if totalMinutes == 0 && strings.TrimSpace(timeStr) != "" {
+	//     // Maybe treat raw numbers as minutes? Or log warning?
+	// }
 
 	return totalMinutes
 }
 
-// ParseCSV parses a CSV file (or CSV string content) with task data.
+// ParseCSV function remains the same...
 func ParseCSV(file io.Reader) []types.Task {
 	var tasks []types.Task
 
@@ -148,6 +142,9 @@ func ParseCSV(file io.Reader) []types.Task {
 				task.Duration = "-" // Standardize empty values
 				task.DurationMins = 0
 			}
+		} else {
+			task.Duration = "-" // Ensure default if column missing
+			task.DurationMins = 0
 		}
 
 		if rateIdx >= 0 && rateIdx < len(record) {
@@ -157,28 +154,52 @@ func ParseCSV(file io.Reader) []types.Task {
 			} else if strings.Contains(rateStr, "$") && strings.Contains(rateStr, "/hr") {
 				rateVal := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(rateStr, "$"), "/hr"))
 				task.Rate, _ = strconv.ParseFloat(rateVal, 64)
+			} else if strings.HasPrefix(rateStr, "$") { // Handle rate given just as $ amount (assume per hour?)
+				rateVal := strings.TrimSpace(strings.TrimPrefix(rateStr, "$"))
+				task.Rate, _ = strconv.ParseFloat(rateVal, 64)
 			}
 		}
 
 		if valueIdx >= 0 && valueIdx < len(record) {
 			valueStr := strings.Trim(record[valueIdx], " \"")
-			if strings.Contains(valueStr, "$") {
+			// Allow for "-" or empty value string
+			if valueStr == "-" || valueStr == "" {
+				task.Value = 0
+			} else if strings.HasPrefix(valueStr, "$") {
 				valueVal := strings.TrimSpace(strings.TrimPrefix(valueStr, "$"))
-				task.Value, _ = strconv.ParseFloat(valueVal, 64)
+				// Use MustParseFloat or check error
+				val, err := strconv.ParseFloat(valueVal, 64)
+				if err == nil {
+					task.Value = val
+				} else {
+					log.Printf("Warning: Could not parse value '%s' from CSV row: %v", valueStr, record)
+					task.Value = 0 // Default to 0 on parse error
+				}
+			} else {
+				// Handle case where value might be a plain number without '$'
+				val, err := strconv.ParseFloat(strings.TrimSpace(valueStr), 64)
+				if err == nil {
+					task.Value = val
+				} else {
+					log.Printf("Warning: Could not parse value '%s' (no '$' prefix) from CSV row: %v", valueStr, record)
+					task.Value = 0 // Default to 0 on parse error
+				}
 			}
 		}
 
 		if typeIdx >= 0 && typeIdx < len(record) {
 			payType := strings.Trim(record[typeIdx], " \"")
 			switch strings.ToLower(payType) {
-			case "prepay":
+			case "prepay", "regularpay", "task": // Added aliases
 				task.Type = "Task"
-			case "overtimepay":
+			case "overtimepay", "exceeded time": // Added alias
 				task.Type = "Exceeded Time"
 			case "missionreward":
 				task.Type = "Mission Reward"
 			case "qaoperation", "operation":
 				task.Type = "Operation"
+			case "adjustment":
+				task.Type = "Adjustment" // Handle Adjustment type
 			default:
 				task.Type = payType // Keep original if unknown
 			}
@@ -203,7 +224,7 @@ func ParseCSV(file io.Reader) []types.Task {
 	return tasks
 }
 
-// ParseText parses the multi-line text input format.
+// ParseText function remains the same...
 func ParseText(input string) []types.Task {
 	var tasks []types.Task
 	log.Printf("[DEBUG] Iniciando ParseText com %d caracteres de texto", len(input))
@@ -219,29 +240,38 @@ func ParseText(input string) []types.Task {
 
 		task, advance := parseTextBlock(lines[i:])
 		if task != nil {
-			log.Printf("[DEBUG] Tarefa (text) encontrada: Type=%s", task.Type)
+			// log.Printf("[DEBUG] Tarefa (text) encontrada: Type=%s, Value=%.2f", task.Type, task.Value) // Log value here too
 			tasks = append(tasks, *task)
 		}
-		i += advance // Advance by the number of lines consumed by parseTextBlock
+		// If parseTextBlock returns nil, it means it wasn't a valid block starting at lines[i].
+		// We should advance by 1 to check the next line as a potential start.
+		// If it *did* parse a block, advance is 8. If it determined it wasn't a block
+		// at the start, advance should be 1.
+		if advance == 0 { // Prevent infinite loops if parseTextBlock has a bug
+			log.Printf("[WARN] parseTextBlock returned advance=0, advancing by 1 to avoid loop. Line: %s", lines[i])
+			advance = 1
+		}
+		i += advance // Advance by the number of lines consumed or skipped
 	}
 
 	log.Printf("Total de %d tarefas foram analisadas do texto.\n", len(tasks))
 	return tasks
 }
 
-// parseTextBlock parses a single task block from the multi-line text format.
-// It expects a specific 8-line structure.
+// **REVISED parseTextBlock**
 func parseTextBlock(lines []string) (*types.Task, int) {
 	// Need at least 8 lines for a potential task block
 	if len(lines) < 8 {
+		// log.Printf("[DEBUG] Not enough lines remaining (%d) for a text block.", len(lines))
 		return nil, len(lines) // Consumed all remaining lines
 	}
 
 	// Check for the expected structure: non-empty lines 0, 1, 2, 4, 5, 7 and empty lines 3, 6
 	if strings.TrimSpace(lines[0]) == "" || strings.TrimSpace(lines[1]) == "" ||
-		strings.TrimSpace(lines[2]) == "" || strings.TrimSpace(lines[4]) == "" ||
+		strings.TrimSpace(lines[2]) == "" || strings.TrimSpace(lines[4]) == "" || // Line 4 must have *something*
 		strings.TrimSpace(lines[5]) == "" || strings.TrimSpace(lines[7]) == "" ||
 		strings.TrimSpace(lines[3]) != "" || strings.TrimSpace(lines[6]) != "" {
+		// log.Printf("[DEBUG] Line structure mismatch at line starting with: %s", lines[0])
 		return nil, 1 // Not a task block, advance by 1 line and try again
 	}
 
@@ -250,57 +280,127 @@ func parseTextBlock(lines []string) (*types.Task, int) {
 		ID:       strings.TrimSpace(lines[1]),
 		Category: strings.TrimSpace(lines[2]),
 		Status:   strings.TrimSpace(lines[7]),
-		Type:     strings.TrimSpace(lines[5]), // Assign Type directly from line 5
+		// Assign Type based on line 5, handle variations
+		Type:         mapTextType(strings.TrimSpace(lines[5])),
+		Duration:     "-", // Default
+		Rate:         0.0,
+		Value:        0.0,
+		DurationMins: 0.0,
 	}
 
-	// Parse duration/rate/value line (line 4)
+	// --- Robust Parsing of Line 4 ---
 	durationRateValue := strings.TrimSpace(lines[4])
-
-	// Split by multiple spaces or tabs - more robust parsing
 	parts := strings.Fields(durationRateValue)
+	nParts := len(parts)
 
-	// Handle different patterns based on the content and number of parts
-	if len(parts) >= 3 {
-		// Assume format: Duration Rate Value (e.g., "1h 30m $10.00/hr $15.00")
-		task.Duration = parts[0]
-		if strings.Contains(parts[1], "$") && strings.Contains(parts[1], "/hr") {
-			rateStr := strings.TrimSuffix(strings.TrimPrefix(parts[1], "$"), "/hr")
-			task.Rate, _ = strconv.ParseFloat(rateStr, 64)
+	valueIdx := -1
+	rateIdx := -1
+	durationEndIdx := nParts // Assume all parts are duration initially
+
+	// 1. Find Value (last part starting with '$', not containing '/hr')
+	if nParts > 0 && strings.HasPrefix(parts[nParts-1], "$") && !strings.Contains(parts[nParts-1], "/hr") {
+		valueStr := strings.TrimPrefix(parts[nParts-1], "$")
+		val, err := strconv.ParseFloat(valueStr, 64)
+		if err == nil {
+			task.Value = val
+			valueIdx = nParts - 1
+			durationEndIdx = valueIdx // Duration ends before value
+		} else {
+			log.Printf("[WARN] Text Parser: Failed to parse potential value '%s': %v", parts[nParts-1], err)
 		}
-		if strings.HasPrefix(parts[2], "$") {
-			valueStr := strings.TrimPrefix(parts[2], "$")
-			task.Value, _ = strconv.ParseFloat(valueStr, 64)
+	}
+
+	// 2. Find Rate (part before Value OR last part, containing '$/hr')
+	rateSearchIdx := -1
+	if valueIdx > 0 {
+		rateSearchIdx = valueIdx - 1 // Look before value
+	} else if nParts > 0 && valueIdx == -1 { // No value found, check last part for rate
+		rateSearchIdx = nParts - 1
+	}
+
+	if rateSearchIdx >= 0 && strings.Contains(parts[rateSearchIdx], "$") && strings.Contains(parts[rateSearchIdx], "/hr") {
+		rateStr := strings.TrimSuffix(strings.TrimPrefix(parts[rateSearchIdx], "$"), "/hr")
+		rate, err := strconv.ParseFloat(strings.TrimSpace(rateStr), 64)
+		if err == nil {
+			task.Rate = rate
+			rateIdx = rateSearchIdx
+			durationEndIdx = rateIdx // Duration ends before rate
+		} else {
+			log.Printf("[WARN] Text Parser: Failed to parse potential rate '%s': %v", parts[rateSearchIdx], err)
 		}
-	} else if len(parts) == 3 && parts[0] == "-" && parts[1] == "-" {
-		// Special case for Mission Reward/Operation: "- - $Value" (e.g., "- - $92.75")
+	} else if rateSearchIdx >= 0 && strings.HasPrefix(parts[rateSearchIdx], "$") && valueIdx != rateSearchIdx {
+		// Handle case like "$7.95 $0.00" where rate doesn't have /hr
+		// Check if it looks like a rate (starts with $) and wasn't already identified as value
+		rateStr := strings.TrimPrefix(parts[rateSearchIdx], "$")
+		rate, err := strconv.ParseFloat(strings.TrimSpace(rateStr), 64)
+		if err == nil {
+			task.Rate = rate
+			rateIdx = rateSearchIdx
+			durationEndIdx = rateIdx // Duration ends before rate
+		} else {
+			log.Printf("[WARN] Text Parser: Failed to parse potential rate (no /hr) '%s': %v", parts[rateSearchIdx], err)
+		}
+	}
+
+	// 3. Extract Duration (parts before rate/value)
+	if durationEndIdx > 0 {
+		durationParts := parts[0:durationEndIdx]
+		// Filter out placeholder "-" before joining
+		actualDurationParts := []string{}
+		isPlaceholder := true
+		for _, p := range durationParts {
+			if p != "-" {
+				actualDurationParts = append(actualDurationParts, p)
+				isPlaceholder = false
+			}
+		}
+
+		if !isPlaceholder && len(actualDurationParts) > 0 {
+			task.Duration = strings.Join(actualDurationParts, " ")
+		} else {
+			task.Duration = "-" // Keep default "-" if only placeholders or empty
+		}
+	} else {
+		// No parts left for duration, or Rate/Value took all parts
 		task.Duration = "-"
-		task.Rate = 0
-		if strings.HasPrefix(parts[2], "$") {
-			valueStr := strings.TrimPrefix(parts[2], "$")
-			task.Value, _ = strconv.ParseFloat(valueStr, 64)
-		}
-	} else if len(parts) > 0 {
-		// Fallback: might just be duration, or something else unexpected
-		task.Duration = parts[0]
-		// Assign default Rate/Value if not parsed
-		if task.Rate == 0 {
-			task.Rate = 0
-		}
-		if task.Value == 0 {
-			task.Value = 0
-		}
+	}
+
+	// Ensure duration is "-" if it still looks like a money value mistakenly
+	if strings.HasPrefix(task.Duration, "$") {
+		log.Printf("[WARN] Text Parser: Corrected Duration from '%s' to '-'", task.Duration)
+		task.Duration = "-"
 	}
 
 	// Calculate duration minutes *after* parsing duration string
 	if task.Duration != "" && task.Duration != "-" {
 		task.DurationMins = ParseTime(task.Duration)
 	} else {
+		task.Duration = "-"   // Standardize
 		task.DurationMins = 0 // Ensure it's 0 if duration is missing/placeholder
 	}
 
-	// Debug output
-	// log.Printf("Text Parsed: Date=%s, ID=%s, Type=%s, Duration=%s, Rate=%.2f, Value=%.2f, DurationMins=%.2f\n",
-	// 	task.Date, task.ID, task.Type, task.Duration, task.Rate, task.Value, task.DurationMins)
+	// Debug output (optional)
+	// log.Printf("Text Parsed: Date=%s, ID=%s, Type=%s, Category=%s, Status=%s", task.Date, task.ID, task.Type, task.Category, task.Status)
+	// log.Printf("           Line 4: '%s' -> Duration='%s', Rate=%.2f, Value=%.2f, DurationMins=%.2f", durationRateValue, task.Duration, task.Rate, task.Value, task.DurationMins)
 
 	return task, 8 // Successfully parsed a task block of 8 lines
+}
+
+// Helper to map text input types to standardized types
+func mapTextType(textType string) string {
+	switch strings.ToLower(textType) {
+	case "task", "regular pay", "prepay":
+		return "Task"
+	case "exceeded time", "overtime pay":
+		return "Exceeded Time"
+	case "mission reward":
+		return "Mission Reward"
+	case "operation", "qa operation":
+		return "Operation"
+	case "adjustment":
+		return "Adjustment"
+	default:
+		log.Printf("[WARN] Unknown text task type encountered: %s", textType)
+		return textType // Keep original if unknown
+	}
 }

@@ -2,16 +2,17 @@ package analyzer
 
 import (
 	"log"
+
 	"github.com/erickgnclvs/go-task-viewer/internal/types"
 )
 
 // AnalyzeData processes a slice of tasks and calculates summary statistics.
 func AnalyzeData(tasks []types.Task) map[string]interface{} {
-	totalTasks := 0             // Count of items explicitly marked as "Task"
-	totalTasksValue := 0.0      // Sum of value for "Task" items
+	totalTasks := 0               // Count of items explicitly marked as "Task"
+	totalTasksValue := 0.0        // Sum of value for "Task" items
 	totalExceededTimeValue := 0.0 // Sum of value for "Exceeded Time" items
-	totalOtherValue := 0.0      // Sum of value for all other item types (Mission Reward, Operation, etc.)
-	totalHours := 0.0         // Sum of duration (in hours) for all item types
+	totalOtherValue := 0.0        // Sum of value for all other item types (Mission Reward, Operation, etc.)
+	totalHours := 0.0             // Sum of duration (in hours) for all item types
 
 	// Detailed hour breakdowns
 	taskHours := 0.0         // Sum of duration (in hours) for "Task" items
@@ -34,7 +35,7 @@ func AnalyzeData(tasks []types.Task) map[string]interface{} {
 		switch task.Type {
 		case "Task":
 			totalTasks++
-			totalTaskCount++             // Increment task count for averages
+			totalTaskCount++                   // Increment task count for averages
 			totalTaskTime += task.DurationMins // Accumulate task time in minutes
 			totalTasksValue += task.Value
 			taskHours += hours
@@ -47,7 +48,7 @@ func AnalyzeData(tasks []types.Task) map[string]interface{} {
 		default: // Catch any unexpected types
 			log.Printf("Warning: Unknown task type encountered: %s", task.Type)
 			totalOtherValue += task.Value // Add value to 'Other'
-			otherHours += hours        // Add hours to 'Other'
+			otherHours += hours           // Add hours to 'Other'
 		}
 	}
 
