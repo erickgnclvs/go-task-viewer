@@ -31,6 +31,13 @@ func main() {
 	staticFilesPath := "cmd/server/templates"
 	fs := http.FileServer(http.Dir(staticFilesPath))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
+	log.Printf("Serving static files from '%s' under '/static/'", staticFilesPath) // Added log
+
+	// Serve data files (like GIFs) from the data directory relative to project root
+	dataFilesPath := "data" // Assumes 'data' directory is at the project root
+	dataFs := http.FileServer(http.Dir(dataFilesPath))
+	mux.Handle("/data/", http.StripPrefix("/data/", dataFs))
+	log.Printf("Serving data files from '%s' under '/data/'", dataFilesPath) // Added log
 
 	// Register handlers from the handlers package
 	mux.HandleFunc("/", handlers.HomeHandler(tmpl))
