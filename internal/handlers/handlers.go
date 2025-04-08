@@ -75,7 +75,7 @@ func AnalyzeHandler(tmpl *template.Template) http.HandlerFunc {
 			// Parse the CSV data (using a new reader from the read bytes)
 			reader := strings.NewReader(rawInputData)
 			tasks = parser.ParseCSV(reader)
-			log.Printf("[DEBUG] CSV Upload: %d tasks found", len(tasks))
+			log.Printf("[DEBUG] CSV Upload: %d tasks found after initial parse", len(tasks))
 			inputSource = "csv"
 		} else if err != http.ErrMissingFile {
 			// Handle other potential errors from FormFile
@@ -99,10 +99,18 @@ func AnalyzeHandler(tmpl *template.Template) http.HandlerFunc {
 					tasks = parser.ParseText(rawInputData)
 					inputSource = "text"
 				}
+				log.Printf("[DEBUG] Text Input: %d tasks found after initial parse", len(tasks))
 			} else {
 				log.Println("[DEBUG] No file uploaded and text area is empty.")
 				// Optionally, redirect back with an error message?
 			}
+		}
+
+		// *** NEW STEP: Fill missing categories ***
+		if len(tasks) > 0 {
+			log.Printf("[DEBUG] Running FillMissingCategories on %d tasks", len(tasks))
+			tasks = parser.FillMissingCategories(tasks)
+			log.Printf("[DEBUG] FillMissingCategories completed. Task count remains %d", len(tasks))
 		}
 
 		// Prepare data for the template
@@ -117,16 +125,16 @@ func AnalyzeHandler(tmpl *template.Template) http.HandlerFunc {
 
 		// Analyze the data and format results if we have tasks
 		if len(tasks) > 0 {
-			log.Printf("[DEBUG] Analyzing %d tasks from source '%s'", len(tasks), inputSource)
-			results := analyzer.AnalyzeData(tasks)
+			log.Printf("[DEBUG] Analyzing %d tasks (post-category fill) from source '%s'", len(tasks), inputSource)
+			results := analyzer.AnalyzeData(tasks) // Pass the modified tasks
 
 			// Populate TemplateData with analysis results
 			populateTemplateData(&data, results)
 
 			// Format tasks for display if requested
 			if showDetails {
-				data.Tasks = formatTasksForDisplay(tasks)
-				log.Printf("[DEBUG] Formatted %d tasks for details display", len(data.Tasks))
+				data.Tasks = formatTasksForDisplay(tasks) // Pass the modified tasks
+				log.Printf("[DEBUG] Formatted %d tasks (post-category fill) for details display", len(data.Tasks))
 			}
 		} else {
 			log.Println("[DEBUG] No tasks found to analyze.")

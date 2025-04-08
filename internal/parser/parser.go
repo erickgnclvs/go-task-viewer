@@ -404,3 +404,53 @@ func mapTextType(textType string) string {
 		return textType // Keep original if unknown
 	}
 }
+
+// isProjectCategory checks if a category string looks like a specific project name
+// rather than a generic type or placeholder.
+func isProjectCategory(category string) bool {
+	trimmedCategory := strings.TrimSpace(category)
+	// Basic check: not empty, not "-", and doesn't look like a "Mission:" description.
+	// You might add more specific checks here if needed (e.g., !strings.Contains(trimmedCategory, "Operation")).
+	return trimmedCategory != "" && trimmedCategory != "-" && !strings.HasPrefix(trimmedCategory, "Mission:")
+}
+
+// FillMissingCategories iterates through tasks and fills missing/generic categories
+// based on the last known specific project category encountered.
+func FillMissingCategories(tasks []types.Task) []types.Task {
+	if len(tasks) == 0 {
+		return tasks // No tasks to process
+	}
+
+	lastKnownProjectCategory := ""
+	modifiedTasks := make([]types.Task, len(tasks)) // Create a new slice to avoid modifying the original directly if needed elsewhere
+
+	for i, task := range tasks {
+		// Check if the current task's category seems like a specific project
+		if isProjectCategory(task.Category) {
+			lastKnownProjectCategory = strings.TrimSpace(task.Category) // Update the last known project
+			// log.Printf("[DEBUG] FillCategory: Found project category '%s' at index %d", lastKnownProjectCategory, i)
+		} else {
+			// If the category is not a specific project and we have a known project category, fill it in.
+			if lastKnownProjectCategory != "" {
+				// log.Printf("[DEBUG] FillCategory: Filling category for task '%s' (index %d) from '%s' to '%s'", task.ID, i, task.Category, lastKnownProjectCategory)
+				task.Category = lastKnownProjectCategory // Modify the category
+			} else {
+				// log.Printf("[DEBUG] FillCategory: No known project category yet for task '%s' (index %d), category remains '%s'", task.ID, i, task.Category)
+			}
+		}
+		modifiedTasks[i] = task // Add the (potentially modified) task to the new slice
+	}
+
+	// Optional: Log how many categories were potentially filled
+	filledCount := 0
+	for i := range tasks {
+		if tasks[i].Category != modifiedTasks[i].Category {
+			filledCount++
+		}
+	}
+	if filledCount > 0 {
+		log.Printf("[INFO] Filled missing/generic category for %d tasks based on preceding project context.", filledCount)
+	}
+
+	return modifiedTasks
+}
