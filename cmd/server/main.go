@@ -27,11 +27,11 @@ func main() {
 	// Setup HTTP server
 	mux := http.NewServeMux()
 
-	// Serve static files (CSS, JS) from templates directory relative to project root
-	staticFilesPath := "cmd/server/templates"
+	// Serve static files (CSS, JS) from the static directory relative to project root
+	staticFilesPath := "static"
 	fs := http.FileServer(http.Dir(staticFilesPath))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
-	log.Printf("Serving static files from '%s' under '/static/'", staticFilesPath) // Added log
+	log.Printf("Serving static files from '%s' under '/static/'", staticFilesPath)
 
 	// Serve data files (like GIFs) from the data directory relative to project root
 	dataFilesPath := "data" // Assumes 'data' directory is at the project root
